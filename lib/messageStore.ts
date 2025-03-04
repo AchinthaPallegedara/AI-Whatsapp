@@ -1,21 +1,33 @@
-// app/lib/messageStore.ts
-type WhatsAppMessage = {
+"use server";
+import { db } from "./db";
+
+// Store a new message with AI reply
+export async function addMessage(message: {
   id: string;
   from: string;
   text: string;
+  reply: string;
   timestamp: Date;
-};
-
-// Simple in-memory storage (replace with a database in production)
-const messages: WhatsAppMessage[] = [];
-
-export function addMessage(message: WhatsAppMessage) {
-  messages.push(message);
-  console.log(`Stored message: ${message.text} from ${message.from}`);
+}) {
+  try {
+    await db.message.create({
+      data: { ...message, processed: true },
+    });
+  } catch (error) {
+    console.error("Error saving message:", error);
+  }
 }
 
-export function getAllMessages() {
-  return [...messages].sort(
-    (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
-  );
+// Retrieve the last few messages from a user (including AI responses)
+export async function getUserMessages(userId: string, limit: number) {
+  try {
+    return await db.message.findMany({
+      where: { from: userId },
+      orderBy: { timestamp: "desc" },
+      take: limit,
+    });
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    return [];
+  }
 }

@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@ai-sdk/deepseek": "^0.1.12",
+    "@prisma/client": "6.4.1",
     "ai": "^4.1.50",
     "next": "15.2.0",
+    "prisma": "^6.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

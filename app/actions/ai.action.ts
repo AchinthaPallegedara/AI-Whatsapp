@@ -18,7 +18,6 @@ export async function generateAIResponse(userMessage: string): Promise<string> {
         },
         { role: "user", content: userMessage },
       ],
-      maxTokens: 100,
     });
 
     return completion.text || "Sorry, I couldn't generate a response.";

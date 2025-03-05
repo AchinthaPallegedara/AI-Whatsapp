@@ -18,6 +18,7 @@ model Message {
   from      String // User's phone number
   text      String // Message content
   reply     String // Reply to the message
+  images    String[] // Image URLs
   timestamp DateTime @default(now()) // Timestamp of the message
   processed Boolean  @default(false)
 }

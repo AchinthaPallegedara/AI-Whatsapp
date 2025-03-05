@@ -24,7 +24,7 @@ export interface WebhookMessage {
 }
 
 // Application Types
-export type Role = "user" | "system";
+export type Role = "user" | "assistant";
 
 export interface ConversationEntry {
   role: Role;
@@ -42,6 +42,8 @@ export interface MessageRecord {
   id: string;
   from: string;
   text: string;
-  reply?: string;
+  reply: string;
+  images: string[];
   timestamp: Date;
+  processed: boolean;
 }

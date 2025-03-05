@@ -90,7 +90,7 @@ async function processIndividualMessage(
       aiResponse
     );
     await messageSender.sendWithRetry(message.from, aiResponse);
-    historyManager.updateCache(message.from, message.text, aiResponse);
+    historyManager.updateCache(message.from, message.text, aiResponse.text);
   } finally {
     release();
   }

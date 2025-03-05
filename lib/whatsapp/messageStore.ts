@@ -19,7 +19,7 @@ export const messageStore = {
     messageId: string,
     userId: string,
     text: string,
-    response: string
+    response: { text: string; images: { url: string; caption: string }[] }
   ): Promise<void> {
     try {
       await db.$transaction(
@@ -29,8 +29,10 @@ export const messageStore = {
               id: messageId,
               from: userId,
               text,
-              reply: response,
+              reply: response.text,
+              images: response.images.map((img) => img.url),
               timestamp: new Date(),
+              processed: true,
             },
           });
         },
@@ -59,8 +61,10 @@ export const messageStore = {
         id: msg.id,
         from: msg.from,
         text: msg.text,
-        reply: msg.reply || undefined,
+        reply: msg.reply,
+        images: msg.images,
         timestamp: msg.timestamp,
+        processed: msg.processed,
       }));
     } catch (error) {
       console.error("Failed to fetch user messages:", error);

@@ -6,6 +6,7 @@ export interface AppConfig {
   MESSAGE_TTL: number;
   TRANSACTION_TIMEOUT: number;
   MAX_RETRIES: number;
+  MESSAGE_BATCH_DELAY: number;
 }
 
 export const CONFIG: AppConfig = {
@@ -15,4 +16,5 @@ export const CONFIG: AppConfig = {
   MESSAGE_TTL: 60 * 1000,
   TRANSACTION_TIMEOUT: 30000,
   MAX_RETRIES: 3,
+  MESSAGE_BATCH_DELAY: 3000, // 3 seconds delay to batch messages
 };

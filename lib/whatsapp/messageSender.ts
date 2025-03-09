@@ -1,4 +1,4 @@
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, sendTypingIndicator } from "@/lib/whatsapp";
 import { CONFIG } from "./config";
 
 interface ImageInfo {
@@ -25,7 +25,14 @@ export const messageSender = {
         await sendWhatsAppMessage(to, { text: message.text });
       }
     } catch (error) {
-      if (attempt >= CONFIG.MAX_RETRIES) throw error;
+      if (attempt >= CONFIG.MAX_RETRIES) {
+        // Turn off typing indicator if all retries fail
+        await sendTypingIndicator(to, false);
+        throw error;
+      }
+
+      // Show typing indicator during retry
+      await sendTypingIndicator(to, true);
       await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
       return this.sendWithRetry(to, message, attempt + 1);
     }

@@ -5,6 +5,19 @@ import type { MessageRecord } from "./types";
 export const messageStore = {
   async isDuplicate(messageId: string): Promise<boolean> {
     try {
+      // For combined message IDs, check if any of the individual IDs exist
+      if (messageId.includes("_")) {
+        const ids = messageId.split("_");
+        const existingMessages = await db.message.findMany({
+          where: {
+            id: {
+              in: ids,
+            },
+          },
+        });
+        return existingMessages.length > 0;
+      }
+
       const existing = await db.message.findUnique({
         where: { id: messageId },
       });

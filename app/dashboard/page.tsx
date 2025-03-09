@@ -1,7 +1,14 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { CurrentPrompt } from "../prompt-builder/current-prompt"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { CurrentPrompt } from "../prompt-builder/current-prompt";
 
 export default function Dashboard() {
   return (
@@ -12,12 +19,18 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>AI Prompt</CardTitle>
-            <CardDescription>Customize how your AI assistant responds to customers</CardDescription>
+            <CardDescription>
+              Customize how your AI assistant responds to customers
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="mb-4">
-              The AI prompt determines how your assistant behaves, what information it provides, and how it interacts
-              with your customers.
+              The AI prompt determines how your assistant behaves, what
+              information it provides, and how it interacts with your customers.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Use the prompt builder to create a custom prompt. If no custom
+              prompt is set, the system will use the default prompt.
             </p>
           </CardContent>
           <CardFooter>
@@ -30,7 +43,9 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Current Prompt</CardTitle>
-            <CardDescription>This is the prompt currently being used by your AI assistant</CardDescription>
+            <CardDescription>
+              This is the prompt currently being used by your AI assistant
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <CurrentPrompt />
@@ -38,6 +53,5 @@ export default function Dashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
-

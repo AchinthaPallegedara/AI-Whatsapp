@@ -33,15 +33,23 @@ export async function getCurrentPrompt(): Promise<string | null> {
     const promptPath = path.join(process.cwd(), "config", "ai-prompt.txt");
 
     try {
-      const prompt = await fs.readFile(promptPath, "utf-8");
-      return prompt;
-    } catch (error) {
-      // File might not exist yet
-      console.error("Error reading current prompt:", error);
+      const stats = await fs.stat(promptPath);
+      if (stats.isFile()) {
+        const prompt = await fs.readFile(promptPath, "utf-8");
+        return prompt;
+      }
       return null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      // Check specifically for file not found error
+      if (error.code === "ENOENT") {
+        return null;
+      }
+      // For other errors, rethrow
+      throw error;
     }
   } catch (error) {
     console.error("Error getting current prompt:", error);
-    throw new Error("Failed to get current prompt");
+    return null; // Return null instead of throwing to prevent UI errors
   }
 }

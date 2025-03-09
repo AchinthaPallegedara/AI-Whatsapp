@@ -11,7 +11,7 @@ import { rateLimit } from "./rateLimit";
 import { historyManager } from "./historyManager";
 import { messageSender } from "./messageSender";
 import { CONFIG } from "./config";
-import { sendTypingIndicator } from "@/lib/whatsapp";
+import { sendTypingIndicator, sendReactionIndicator } from "@/lib/whatsapp";
 
 // Global state management with types
 const userLocks = new Map<string, Mutex>();
@@ -77,6 +77,25 @@ async function queueMessage(message: ProcessedMessage): Promise<void> {
 
   const userId = message.from;
 
+  // Send a reaction to the message to indicate it was received
+  // This is a more reliable alternative to typing indicators
+  try {
+    await sendReactionIndicator(userId, message.id);
+  } catch (error) {
+    // Non-critical, continue even if this fails
+    console.warn("Failed to send reaction indicator:", error);
+  }
+
+  // Try to send typing indicator, but don't block if it fails
+  try {
+    sendTypingIndicator(userId, true).catch((err) => {
+      console.warn("Failed to send typing indicator:", err);
+    });
+  } catch (error) {
+    // Non-critical, continue even if this fails
+    console.warn("Failed to initiate typing indicator:", error);
+  }
+
   // Create a new queue if one doesn't exist
   if (!messageQueues.has(userId)) {
     messageQueues.set(userId, {
@@ -86,9 +105,6 @@ async function queueMessage(message: ProcessedMessage): Promise<void> {
         CONFIG.MESSAGE_BATCH_DELAY
       ),
     });
-
-    // Show typing indicator immediately when first message is received
-    await sendTypingIndicator(userId, true);
     return;
   }
 
@@ -113,7 +129,15 @@ async function processQueuedMessages(userId: string): Promise<void> {
   messageQueues.delete(userId);
 
   if (queue.messages.length === 0) {
-    await sendTypingIndicator(userId, false);
+    // Try to stop typing indicator, but don't block if it fails
+    try {
+      sendTypingIndicator(userId, false).catch((err) => {
+        console.warn("Failed to stop typing indicator:", err);
+      });
+    } catch (error) {
+      // Non-critical
+      console.warn("Failed to stop typing indicator:", error);
+    }
     return;
   }
 
@@ -138,7 +162,15 @@ async function processIndividualMessage(
   originalMessages: ProcessedMessage[] = [message]
 ): Promise<void> {
   if (!message.text) {
-    await sendTypingIndicator(message.from, false);
+    // Try to stop typing indicator, but don't block if it fails
+    try {
+      sendTypingIndicator(message.from, false).catch((err) => {
+        console.warn("Failed to stop typing indicator:", err);
+      });
+    } catch (error) {
+      // Non-critical
+      console.warn("Failed to stop typing indicator:", error);
+    }
     return;
   }
 
@@ -148,12 +180,28 @@ async function processIndividualMessage(
   const release = await userLocks.get(message.from)!.acquire();
 
   try {
-    // Keep typing indicator on
-    await sendTypingIndicator(message.from, true);
+    // Try to keep typing indicator on, but don't block if it fails
+    try {
+      sendTypingIndicator(message.from, true).catch((err) => {
+        console.warn("Failed to maintain typing indicator:", err);
+      });
+    } catch (error) {
+      // Non-critical
+      console.warn("Failed to maintain typing indicator:", error);
+    }
 
     // Check rate limiting
     if (rateLimit.isLimited(message.from)) {
-      await sendTypingIndicator(message.from, false);
+      // Try to stop typing indicator, but don't block if it fails
+      try {
+        sendTypingIndicator(message.from, false).catch((err) => {
+          console.warn("Failed to stop typing indicator:", err);
+        });
+      } catch (error) {
+        // Non-critical
+        console.warn("Failed to stop typing indicator:", error);
+      }
+
       await rateLimit.handleLimitExceeded(message.from);
       return;
     }
@@ -163,11 +211,19 @@ async function processIndividualMessage(
       message.text
     );
 
-    // Generate AI response (typing indicator remains on during this time)
+    // Generate AI response
     const aiResponse = await generateAIResponse(history);
+    console.log("Generated AI response:", aiResponse);
 
-    // Turn off typing indicator before sending the actual message
-    await sendTypingIndicator(message.from, false);
+    // Try to stop typing indicator, but don't block if it fails
+    try {
+      sendTypingIndicator(message.from, false).catch((err) => {
+        console.warn("Failed to stop typing indicator:", err);
+      });
+    } catch (error) {
+      // Non-critical
+      console.warn("Failed to stop typing indicator:", error);
+    }
 
     // Store each original message with the same AI response
     for (const originalMessage of originalMessages) {
@@ -182,8 +238,17 @@ async function processIndividualMessage(
     await messageSender.sendWithRetry(message.from, aiResponse);
     historyManager.updateCache(message.from, message.text, aiResponse.text);
   } catch (error) {
-    // Make sure to turn off typing indicator in case of error
-    await sendTypingIndicator(message.from, false);
+    // Try to stop typing indicator in case of error, but don't block if it fails
+    try {
+      sendTypingIndicator(message.from, false).catch((err) => {
+        console.warn("Failed to stop typing indicator:", err);
+      });
+    } catch (typingError) {
+      // Non-critical
+      console.warn("Failed to stop typing indicator:", typingError);
+    }
+
+    console.error("Error processing message:", error);
     throw error;
   } finally {
     release();

@@ -1,6 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use server";
+
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { generateText } from "ai";
+import fs from "fs/promises";
+import path from "path";
 
 const deepseek = createDeepSeek({
   apiKey: process.env.DEEPSEEK_API_KEY ?? "",
@@ -15,69 +19,78 @@ interface AIResponse {
   text: string;
   images: ImageInfo[];
 }
+
+async function getSystemPrompt(): Promise<string> {
+  try {
+    // Try to read the custom prompt
+    const promptPath = path.join(process.cwd(), "config", "ai-prompt.txt");
+    try {
+      return await fs.readFile(promptPath, "utf-8");
+    } catch (error) {
+      // If file doesn't exist, return the default prompt
+      return (
+        "You are a professional Sales Manager at Claviq, a retail shop. Primary communication guidelines:\n\n" +
+        "1. Language: Reply in English if user messages in English, reply in Sinhala if user messages in Sinhala\n" +
+        "2. Tone: Professional and business-oriented\n" +
+        "3. Response style: Clear and concise with appropriate technical terms and always give short messsage as possiable\n\n" +
+        "Key responsibilities:\n" +
+        "- Collect name and email\n" +
+        "- Understand user wanted product is in our store\n" +
+        "- Check the item available in the JSON:\\n" +
+        JSON.stringify(
+          [
+            {
+              name: "Wireless Noise-Canceling Headphones",
+              price: 249.99,
+              imageURL: "https://picsum.photos/300/300?random=1",
+            },
+            {
+              name: "Smart Fitness Tracker",
+              price: 129.5,
+              imageURL: "https://picsum.photos/300/300?random=2",
+            },
+            {
+              name: "Portable Bluetooth Speaker",
+              price: 89.99,
+              imageURL: "https://picsum.photos/300/300?random=3",
+            },
+            {
+              name: "Electric Coffee Grinder",
+              price: 59.75,
+              imageURL: "https://picsum.photos/300/300?random=4",
+            },
+            {
+              name: "Ergonomic Office Chair",
+              price: 299.0,
+              imageURL: "https://picsum.photos/300/300?random=5",
+            },
+          ],
+          null,
+          2
+        ) +
+        "\\n" +
+        "- Clearly communicate next steps\n\n" +
+        "Maintain professional communication while incorporating technical terms naturally. Don't ask for all details at once. Get one by one. Focus on business-oriented responses that align with corporate standards. If previous messages are available, they're included below. If not clear, ask for clarification. When mentioning products, include their image URLs and brief captions."
+      );
+    }
+  } catch (error) {
+    console.error("Error reading prompt:", error);
+    throw error;
+  }
+}
+
 export async function generateAIResponse(
   history: { role: "system" | "user" | "assistant" | "data"; content: string }[]
 ): Promise<AIResponse> {
   try {
+    const systemPrompt = await getSystemPrompt();
+
     const completion = await generateText({
       model: deepseek("deepseek-chat"),
       messages: [
         {
           role: "system",
-          content:
-            "You are a Sales Manager at Claviq, a retail shop. Primary communication guidelines:\n\n" +
-            "1. Language: Reply in English if user messages in English, reply in Sinhala if user messages in Sinhala\n" +
-            "2. Tone:friendly and business-oriented\n" +
-            "3. Use WhatsApp Markdown for bold text with single asterisks: *text* (e.g., *Product*: *$299*)\n" +
-            "4. Response style: Clear and concise with appropriate technical terms and always give short message as possible\n\n" +
-            "Key responsibilities:\n" +
-            "- Collect name \n" +
-            "- Guide through order process: 1) Product selection 2) Quantity 3) Delivery address\n" +
-            "- Check product availability in the JSON:\n" +
-            JSON.stringify(
-              [
-                {
-                  name: "Wireless Noise-Canceling Headphones",
-                  price: 249.99,
-                  imageURL: "https://picsum.photos/300/300?random=1",
-                },
-                {
-                  name: "Smart Fitness Tracker",
-                  price: 129.5,
-                  imageURL: "https://picsum.photos/300/300?random=2",
-                },
-                {
-                  name: "Portable Bluetooth Speaker",
-                  price: 89.99,
-                  imageURL: "https://picsum.photos/300/300?random=3",
-                },
-                {
-                  name: "Electric Coffee Grinder",
-                  price: 59.75,
-                  imageURL: "https://picsum.photos/300/300?random=4",
-                },
-                {
-                  name: "Ergonomic Office Chair",
-                  price: 299.0,
-                  imageURL: "https://picsum.photos/300/300?random=5",
-                },
-              ],
-              null,
-              2
-            ) +
-            " don't share all products. share only asked product\n" +
-            "Order Process Rules:\n" +
-            "1. First ask how to help\n" +
-            "2. Then ask what product they're interested in\n" +
-            "3. Show product details with image when first mentioned\n" +
-            "4. Confirm quantity needed\n" +
-            "5. Ask for delivery address\n" +
-            "6. Summarize order details for confirmation\n\n" +
-            "Language Rules:\n" +
-            "- If user writes in Sinhala, respond in Sinhala with same formatting\n" +
-            "- don't use sinhala words like 'ඔන්න','එක ගැන උදව් කරන්න පුළුවන්' aslo don't use '!' and hi for every message\n" +
-            "- Keep same order process flow in both languages\n" +
-            "Only include product images (as markdown links and product name as caption) when specifically asked or during first product mention.",
+          content: systemPrompt,
         },
         ...history,
       ],
@@ -90,18 +103,20 @@ export async function generateAIResponse(
       images: [],
     };
 
-    // ✅ Extract Markdown-style links with captions
-    const markdownLinkRegex = /\[([^\]]+)\]\((https:\/\/[^)]+)\)/g;
-    let match;
-
-    while ((match = markdownLinkRegex.exec(response.text)) !== null) {
-      response.images.push({ url: match[2], caption: match[1] });
+    // Extract all image URLs and captions from the response
+    const imageMatches = response.text.matchAll(
+      /imageURL: "(https:\/\/[^"]+)"/g
+    );
+    for (const match of imageMatches) {
+      const imageUrl = match[1];
+      const captionMatch = response.text.match(/name: "([^"]+)"/);
+      const caption = captionMatch ? captionMatch[1] : "Product Image";
+      response.images.push({ url: imageUrl, caption });
     }
 
-    // ✅ Remove the extracted links from the response text
-    response.text = response.text.replace(markdownLinkRegex, "").trim();
-    //TODO
-    console.log("Generated AI response:", response);
+    // Remove all image URLs from the text response
+    response.text = response.text.replace(/imageURL: "[^"]+"/g, "").trim();
+
     return response;
   } catch (error) {
     console.error("Error generating AI response:", error);
@@ -111,14 +126,3 @@ export async function generateAIResponse(
     };
   }
 }
-
-// "You are a professional Sales Manager at Claviq, a web development agency. Primary communication guidelines:\n\n" +
-// "1. Language: Reply in English if user messages in English, reply in Sinhala if user messages in Sinhala\n" +
-// "2. Tone: Professional and business-oriented\n" +
-// "3. Response style: Clear and concise with appropriate technical terms and always give short messsage as possiable\n\n" +
-// "Key responsibilities:\n" +
-// "- Collect name and email\n" +
-// "- Understand website requirements\n" +
-// "- Explain development process\n" +
-// "- Clearly communicate next steps\n\n" +
-// "Maintain professional communication while incorporating technical terms naturally.Don't ask to all details at onece. get one by one. Focus on business-oriented responses that align with corporate standards.If previous messages are avalable it's included below Also it not clear, ask for clarification.",

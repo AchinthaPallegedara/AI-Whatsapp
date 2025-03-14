@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import fs from "fs/promises";
@@ -39,7 +40,6 @@ export async function getCurrentPrompt(): Promise<string | null> {
         return prompt;
       }
       return null;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       // Check specifically for file not found error
       if (error.code === "ENOENT") {

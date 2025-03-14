@@ -8,6 +8,7 @@ export interface AppConfig {
   MAX_RETRIES: number;
   MESSAGE_BATCH_DELAY: number;
   ENABLE_TYPING_INDICATOR: boolean;
+  GOOGLE_API_KEY: string;
 }
 
 export const CONFIG: AppConfig = {
@@ -19,4 +20,5 @@ export const CONFIG: AppConfig = {
   MAX_RETRIES: 3,
   MESSAGE_BATCH_DELAY: 3000, // 3 seconds delay to batch messages
   ENABLE_TYPING_INDICATOR: process.env.ENABLE_TYPING_INDICATOR === "true",
+  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || "",
 };
